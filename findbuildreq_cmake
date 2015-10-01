@@ -1,11 +1,13 @@
 #! /bin/bash
 
-#       Name:    cmake_checker.sh
+#       Name:    findbuildreq_cmake
 #       Version: 5
 #       License:  GPL v3
 #       https://gnu.org/licenses/gpl.html
-#
-#	This script find dependencies (rpm) from CMakeCache.txt
+#		Written by: tele
+
+
+#	This script find rpm dependencies from CMakeCache.txt
 #	CMakeCache.txt is created after build app from source code and when for build app was used cmake.
 #	This is useful for find " BuildRequires: " for .spec file (rpm package build).
 #-----------------------
@@ -14,16 +16,13 @@
 #-----------------------
 #	Script use to analize file from:  ~/src/rpm/BUILD/name_package/build/CMakeCache.txt
 #	When you use it script show founded CMakeCache.txt from  ~/src/rpm/BUILD/
-#	Made for PCLinuxOS
+#		Made for PCLinuxOS
 #
 # Dependencies: awk , sed , rpm , find , cat , grep , sort , uniq , rev , rm 
-#	Written by: tele
 
 
 #  ----- How Use ? -----
-#  $ ./checkdep.cmakecache
-
-
+#			 ./findbuildreq_cmake
 
 
 #		Example output:
