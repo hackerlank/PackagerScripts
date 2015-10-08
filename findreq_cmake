@@ -477,7 +477,7 @@ echo "	Founded $dab qml scripts."
 echo " "
 
 if [ "$dab" != "0" ]; then 
-cat ~/tmp/CheckCmakecache/3.qml.rpm.list | sort | rev | cut -d"-" -f 3- | rev | awk '{printf "Requires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
+cat ~/tmp/CheckCmakecache/3.qml.rpm.list | sort | uniq | rev | cut -d"-" -f 3- | rev | awk '{printf "Requires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
 
 fi
 
