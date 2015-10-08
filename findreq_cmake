@@ -1,22 +1,29 @@
 #! /bin/bash
 
 #       Name:    findbuildreq_cmake
-#       Version: 5
+#       Version: 6
 #       License:  GPL v3
 #       https://gnu.org/licenses/gpl.html
 #		Written by: tele
 
 
-#	This script find rpm dependencies from CMakeCache.txt
-#	CMakeCache.txt is created after build app from source code and when for build app was used cmake.
-#	This is useful for find " BuildRequires: " for .spec file (rpm package build).
+#	- This script find rpm dependencies from CMakeCache.txt,
+#	  also can find QML dependencies from .qml files.
+#
+#	- CMakeCache.txt is created after build app from source code and when for build app was used cmake.
+#	  This is useful for find " BuildRequires: " for .spec file (rpm package build).
 #-----------------------
 #		$ cmake ..
 #		$ make
 #-----------------------
-#	Script use to analize file from:  ~/src/rpm/BUILD/name_package/build/CMakeCache.txt
-#	When you use it script show founded CMakeCache.txt from  ~/src/rpm/BUILD/
-#		Made for PCLinuxOS
+#	  Script use to analize dependencies using file from:  ~/src/rpm/BUILD/name_package/build/CMakeCache.txt
+#
+#   - QML scipts can be found only in source code (not found in folder build after compile)
+#	- This is useful for find " Requires: " for .spec file (rpm package build).
+#	  This script use qmlmod.list to find paths for qml modules.
+#	  qml modules is file created from script "findmodules_qml"
+#		
+# Script made for PCLinuxOS
 #
 # Dependencies: awk , sed , rpm , find , cat , grep , sort , uniq , rev , rm 
 
@@ -53,43 +60,8 @@
 VERBOSE=0
 
 
-
-#----------- Menu -------------------------------------------------------{
- for i in $*
-do
-   case $i in
-       --debug|-d)
-			VERBOSE=1
-			echo "Debug ON"
-       ;;
-       --help)
-			echo "-------------------------------------------------------"
-			echo "usage: $0 --debug"
-			echo "-------------------------------------------------------"
-			echo "--debug: verbose output for debugging"
-			echo "--help: show options"
-			echo " "
-			echo "      This script find BuildRequires dependencies from "
-			echo -e "   BUILD folder if you used cmake for build app. \n"
-       exit
-       ;;
-       *)
-			# unknown option
-			echo "Error: unknown option"
-			echo "usage: $0 --help"
-       exit
-       ;;
-   esac
-done
-#----------- Menu -------------------------------------------------------}
-
-
-
-
 # check which user I am
 aa=$(whoami)
-
-
 
 
 # don't use root account
@@ -102,12 +74,83 @@ fi
 
 
 
+#----------- Menu -------------------------------------------------------{
+# for i in $1
+#do
+	case $1 in
+		--debug|-d)
+			VERBOSE=1
+			echo "Debug ON"
 
-# find  CMakeCache.txt files
-ab=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
+					# check file
+					if [ -d "$2" ]; then 
+						echo "OK, path for folder exist"
+
+						# path
+						ab="$2"
+						aba=$(find "$2" -name CMakeCache.txt)
+					else 
+
+
+						# if variable $1 is empty
+						if [ -z $2 ]; then
+							ab="/home/$aa/src/rpm/BUILD"
+							# find  CMakeCache.txt files
+							aba=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
+						else
+							echo -e "\n Error: \n Folder not exist.\n"
+							echo "Try use: $0 --help"
+							exit 1
+						fi
+
+					fi
+
+		;;
+		--help|-h)
+			echo "-------------------------------------------------------"
+			echo "usage: $0 --debug /path/to/source_code/"
+			echo "-------------------------------------------------------"
+			echo "--debug: verbose output for debugging"
+			echo "--help: show options"
+			echo " "
+			echo "      This script find BuildRequires dependencies from "
+			echo -e "   BUILD folder if you used cmake for build app. \n"
+       exit
+       ;;
+       *)
+					# check file
+					if [ -d "$1" ]; then 
+						echo "OK, path for folder exist"
+
+						# path
+						ab="$1"
+						aba=$(find "$1" -name CMakeCache.txt)
+					else 
+						# if variable $1 is empty
+						if [ -z $1 ]; then
+							ab="/home/$aa/src/rpm/BUILD"
+							# find  CMakeCache.txt files
+							aba=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
+						else
+							echo -e "\n Error: \n Folder not exist or unknown option.\n"
+							echo "Try use: $0 --help"
+							exit 1
+						fi
+
+					fi
+
+       ;;
+   esac
+#done
+#----------- Menu -------------------------------------------------------}
 
 
 
+# path
+echo "Source Code Path: $ab"
+
+# CMakeCache.txt
+echo "CMakeCache.txt Path: $aba"
 
 
 
@@ -142,7 +185,7 @@ ab=$(find /home/$aa/src/rpm/BUILD -name CMakeCache.txt)
 
 
 # count lines ( this count will work )
-ac=$(echo "$ab" | sed '/^\s*$/d' | wc -l)
+ac=$(echo "$aba" | sed '/^\s*$/d' | wc -l)
  
 
 
@@ -159,13 +202,13 @@ elif  [ "$ac" -lt "1" ]
 			exit 1
 else 
 			echo "Too many CMakeCache.txt found." 
-			echo "$ab" | nl
+			echo "$aba" | nl
 			echo " "
 			echo -e "Choose line, from which we will check dependencies \n"
 			echo -e "\n I suggest choose someting like: \n /home/user_name/src/rpm/BUILD/app_name/build/CMakeCache.txt \n"
 			read line
 			echo "You choose line $line :"
-			ad=$(echo "$ab" | awk 'NR=="'"$line"'"')
+			ad=$(echo "$aba" | awk 'NR=="'"$line"'"')
 			echo "$ad"
 			echo " "
 
@@ -175,16 +218,12 @@ else
 					exit 1
 			fi
 			
-			# confirm $ab, path CMakeCache.txt
+			# confirm $aba, path CMakeCache.txt
 			ab=$ad
 
 fi
 #---------------------------------------------}
 
-
-
-# for debug
-echo "$ab - ab"
 
 
 
@@ -210,10 +249,10 @@ fi
 
 #----------------------------{
 # parse CMakeCache.txt
-cat $ab | grep "DIR:PATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.dir.cmakecache.list
+cat $aba | grep "DIR:PATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.dir.cmakecache.list
 
 
-cat $ab | grep "FILEPATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.file.cmakecache.list
+cat $aba | grep "FILEPATH=/" | grep -v "CMAKE_INSTALL" | cut -d "=" -f2 > ~/tmp/CheckCmakecache/1.file.cmakecache.list
 #----------------------------}
 
 
@@ -369,6 +408,47 @@ fi
 
 
 
+#---- QML Checker -------------------------------------------------{
+# http://doc.qt.io/qt-5/qmlmodules.html
+
+# "Source Code Path: $ab"
+# "CMakeCache.txt Path: $aba"
+
+
+echo -e "\n\n Source Code Path: $ab"
+	# find files
+    find $ab -name '*.qml' > ~/tmp/CheckCmakecache/1.qml.list
+
+	dab=$(cat ~/tmp/CheckCmakecache/1.qml.list   | wc -l)
+	echo "	Founded $dab qml scripts."
+
+
+if [ "$dab" != "0" ]; then 
+
+	grep -r "import" "$ab"  | cut -d":" -f2 | grep Qt | grep -v "translation" | cut -d" " -f2 | sort | uniq > ~/tmp/CheckCmakecache/2.qml.log
+
+	# count lines
+	dac=$(cat ~/tmp/CheckCmakecache/2.qml.log | wc -l)
+	
+	# Loop ---------------------
+	for i in `seq 1 $dac`
+	do
+		echo "Loop nr: $i / $dac 2.qml.log"
+
+		# line from file
+		dad=$(awk 'NR=='$i ~/tmp/CheckCmakecache/2.qml.log)
+
+		# qml module path
+		dae=$(cat qmlmod.list | grep "module $dad" | cut -d":" -f1)
+
+		rpm -qf "$dae" >> ~/tmp/CheckCmakecache/3.qml.rpm.list
+	done
+fi
+
+
+
+#---- QML Checker -------------------------------------------------}
+
 
 
 
@@ -386,18 +466,24 @@ fi
 
 
 
-# output to terminal
-echo -e "\n Path: $ab \n"
+# --  output to terminal -----------{
+echo -e "\n CMakeCache.txt Path: $aba \n"
 echo -e "\nFouded Build dependencies:"
 cat ~/tmp/CheckCmakecache/2.rpm.list | sort | uniq | rev | cut -d"-" -f 3- | rev | awk '{printf "BuildRequires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
 
 
+echo -e "\n\n Source Code Path: $ab"
+echo "	Founded $dab qml scripts."
+echo " "
+
+if [ "$dab" != "0" ]; then 
+cat ~/tmp/CheckCmakecache/3.qml.rpm.list | sort | rev | cut -d"-" -f 3- | rev | awk '{printf "Requires:  " $1 "\n" }' | sed -e 's/lib64/%{_lib}/g'
+
+fi
 
 
 
-
-
-#-----------------------------------------------------{
+#----------------------------------
 if [ -f ~/tmp/CheckCmakecache/Errors.log ]
 then
 	if [ "$VERBOSE" = 0 ]; then
@@ -407,7 +493,13 @@ then
 		echo -e "Now you can read errors in  ~/tmp/CheckCmakecache/Errors.log \n"
 	fi
 fi
-#------------------------------------------------------}
+#-----------------------------------
+
+
+# --  output to terminal -----------}
+
+
+
 
 
 
